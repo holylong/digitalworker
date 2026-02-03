@@ -1,0 +1,23 @@
+{
+  "name": "p2p-chat",
+  "version": "1.0.0",
+  "description": "局域网P2P聊天工具",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "typecheck": "bun tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/core": "^0.3.5",
+    "@clack/prompts": "^0.7.0",
+    "chalk": "^5.3.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  }
+}

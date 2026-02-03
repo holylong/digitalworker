@@ -106,9 +106,27 @@ export namespace Server {
             origin(input) {
               if (!input) return
 
+              // Allow localhost
               if (input.startsWith("http://localhost:")) return input
               if (input.startsWith("http://127.0.0.1:")) return input
               if (input === "tauri://localhost" || input === "http://tauri.localhost") return input
+
+              // Allow private IP addresses (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
+              try {
+                const url = new URL(input)
+                const hostname = url.hostname
+
+                // 10.0.0.0/8
+                if (/^10\.\d+\.\d+\.\d+$/.test(hostname)) return input
+                // 192.168.0.0/16
+                if (/^192\.168\.\d+\.\d+$/.test(hostname)) return input
+                // 172.16.0.0/12
+                if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname)) return input
+                // 127.0.0.0/8 (loopback)
+                if (/^127\.\d+\.\d+\.\d+$/.test(hostname)) return input
+              } catch {
+                // Invalid URL, continue
+              }
 
               // *.opencode.ai (https only, adjust if needed)
               if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {

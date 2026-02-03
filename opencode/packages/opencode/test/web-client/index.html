@@ -112,6 +112,62 @@
             cursor: not-allowed;
         }
 
+        .workspace-panel {
+            padding: 10px 20px;
+            background: #f0fdf4;
+            border-bottom: 1px solid #bbf7d0;
+            display: none;
+        }
+
+        .workspace-panel.visible {
+            display: block;
+        }
+
+        .workspace-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .workspace-info-text {
+            font-size: 13px;
+            color: #166534;
+        }
+
+        .workspace-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .workspace-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .workspace-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .workspace-option input[type="text"] {
+            padding: 6px 10px;
+            border: 1px solid #86efac;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 200px;
+        }
+
+        .workspace-option label {
+            cursor: pointer;
+            user-select: none;
+        }
+
         .chat-container {
             flex: 1;
             overflow-y: auto;
@@ -350,6 +406,24 @@
             <button onclick="connectToServer()">连接</button>
         </div>
 
+        <div class="workspace-panel" id="workspacePanel">
+            <div class="workspace-info">
+                <div class="workspace-info-text">
+                    📁 工作空间: <span id="workspacePath">-</span>
+                </div>
+            </div>
+            <div class="workspace-options">
+                <div class="workspace-option">
+                    <input type="checkbox" id="autoCreateProject" checked>
+                    <label for="autoCreateProject">自动创建项目</label>
+                </div>
+                <div class="workspace-option">
+                    <label for="customProjectName">项目名称:</label>
+                    <input type="text" id="customProjectName" placeholder="留空自动生成">
+                </div>
+            </div>
+        </div>
+
         <div class="chat-container" id="chatContainer">
             <div class="system-message">欢迎使用 OpenCode Web Client</div>
             <div class="system-message">请先配置服务器地址并连接，然后开始对话</div>
@@ -382,6 +456,8 @@
         let eventSource = null;
         let currentSessionId = null;
         let pendingMessages = new Map();
+        let messageCounter = 0;  // 用于生成唯一的消息显示 ID
+        let messageDisplayMap = new Map();  // sessionID -> displayId 映射
 
         // 从 localStorage 加载配置
         function loadConfig() {
@@ -443,10 +519,17 @@
                     statusText.textContent = '已连接';
                     sendButton.disabled = false;
 
+                    // 显示工作空间信息
+                    if (data.workspace) {
+                        document.getElementById('workspacePath').textContent = data.workspace;
+                        document.getElementById('workspacePanel').classList.add('visible');
+                    }
+
                     // 连接 SSE 事件流
                     connectEventStream();
 
                     addSystemMessage('已连接到服务器 ' + serverUrl);
+                    addSystemMessage('工作空间: ' + data.workspace);
                 } else {
                     throw new Error('连接失败: ' + response.status);
                 }
@@ -531,14 +614,24 @@
         function handlePartUpdated(part) {
             if (!part.sessionID) return;
 
+            // 查找对应的 displayId
+            const messageID = part.messageID || part.id;
+            const key = part.sessionID + ':' + messageID;
+            let displayId = messageDisplayMap.get(key);
+
+            // 如果没有找到映射，使用 sessionID（向后兼容）
+            if (!displayId) {
+                displayId = messageDisplayMap.get(part.sessionID) || part.sessionID;
+            }
+
             // 如果是 AI 的文本回复
             if (part.type === 'text' && part.state?.text) {
-                updateAssistantMessage(part.sessionID, part.state.text, part.state.end);
+                updateAssistantMessage(displayId, part.state.text, part.state.end);
             }
 
             // 如果是工具使用
             if (part.type === 'tool' && part.state?.status === 'completed') {
-                addToolUse(part.sessionID, part.tool, part.state);
+                addToolUse(displayId, part.tool, part.state);
             }
 
             // 如果开始执行，显示 typing 指示器
@@ -569,6 +662,11 @@
 
         // 创建助手消息元素
         function createAssistantMessage(sessionId, initialText = '') {
+            const existingDiv = document.getElementById(`msg-${sessionId}`);
+            if (existingDiv) {
+                return existingDiv;  // 如果已存在，返回现有元素
+            }
+
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant';
             messageDiv.id = `msg-${sessionId}`;
@@ -578,6 +676,8 @@
                     <div class="message-bubble markdown-content">${formatMarkdown(initialText)}</div>
                 </div>
             `;
+            document.getElementById('chatContainer').appendChild(messageDiv);
+            scrollToBottom();
             return messageDiv;
         }
 
@@ -692,6 +792,9 @@
 
             if (!message || !isConnected) return;
 
+            // 生成唯一的消息显示 ID
+            const displayId = 'msg-' + Date.now() + '-' + (++messageCounter);
+
             // 添加用户消息到聊天界面
             addUserMessage(message);
 
@@ -704,11 +807,17 @@
             try {
                 showTypingIndicator();
 
+                // 获取工作空间选项
+                const autoCreateProject = document.getElementById('autoCreateProject').checked;
+                const customProjectName = document.getElementById('customProjectName').value.trim();
+
                 // 使用当前会话 ID 或创建新会话
                 const requestBody = {
                     type: 'prompt',
                     message: message,
-                    sessionID: currentSessionId || undefined
+                    sessionID: currentSessionId || undefined,
+                    autoCreateProject: autoCreateProject,
+                    projectName: customProjectName || undefined
                 };
 
                 const response = await fetch(`${serverUrl}/remote/execute`, {
@@ -726,13 +835,26 @@
                 if (result.success) {
                     // 保存会话 ID
                     currentSessionId = result.sessionID;
-                    console.log('消息已发送, 会话 ID:', currentSessionId);
+                    console.log('消息已发送, 会话 ID:', currentSessionId, '消息 ID:', result.messageID);
+
+                    // 映射 sessionID + messageID 到 displayId
+                    if (result.messageID) {
+                        messageDisplayMap.set(currentSessionId + ':' + result.messageID, displayId);
+                    }
+
+                    // 使用 displayId 创建 AI 回复消息元素
+                    createAssistantMessage(displayId, '');
+
+                    // 显示项目目录信息
+                    if (result.projectDir) {
+                        addSystemMessage('📁 项目目录: ' + result.projectDir);
+                    }
 
                     // 如果有立即返回的数据，显示它
                     if (result.data && result.data.parts) {
                         for (const part of result.data.parts) {
                             if (part.type === 'text' && part.text) {
-                                updateAssistantMessage(currentSessionId, part.text, true);
+                                updateAssistantMessage(displayId, part.text, true);
                             }
                         }
                     }
