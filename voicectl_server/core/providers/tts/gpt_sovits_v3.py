@@ -1,0 +1,86 @@
+import requests
+from config.logger import setup_logging
+from core.providers.tts.base import TTSProviderBase
+from core.utils.util import parse_string_to_list
+import asyncio
+import aiohttp
+
+TAG = __name__
+logger = setup_logging()
+
+
+class TTSProvider(TTSProviderBase):
+    def __init__(self, config, delete_audio_file):
+        super().__init__(config, delete_audio_file)
+        self.url = config.get("url")
+        self.refer_wav_path = config.get('ref_audio')if config.get('ref_audio') else config.get("refer_wav_path")
+        self.prompt_text = config.get('ref_text')if config.get('ref_text') else config.get("prompt_text")
+        self.prompt_language = config.get("prompt_language")
+        self.text_language = config.get("text_language", "audo")
+
+        # 处理空字符串的情况
+        top_k = config.get("top_k", "15")
+        top_p = config.get("top_p", "1.0")
+        temperature = config.get("temperature", "1.0")
+        sample_steps = config.get("sample_steps", "32")
+        speed = config.get("speed", "1.0")
+
+        self.top_k = int(top_k) if top_k else 15
+        self.top_p = float(top_p) if top_p else 1.0
+        self.temperature = float(temperature) if temperature else 1.0
+        self.sample_steps = int(sample_steps) if sample_steps else 32
+        self.speed = float(speed) if speed else 1.0
+
+        self.cut_punc = config.get("cut_punc", "")
+        self.inp_refs = parse_string_to_list(config.get("inp_refs"))
+        self.if_sr = str(config.get("if_sr", False)).lower() in ("true", "1", "yes")
+        self.audio_file_type = config.get("format", "wav")
+
+    async def text_to_speak(self, text, output_file):
+        request_params = {
+            "refer_wav_path": self.refer_wav_path,
+            "prompt_text": self.prompt_text,
+            "prompt_language": self.prompt_language,
+            "text": text,
+            "text_language": self.text_language,
+            "top_k": self.top_k,
+            "top_p": self.top_p,
+            "temperature": self.temperature,
+            "cut_punc": self.cut_punc,
+            "speed": self.speed,
+            "inp_refs": self.inp_refs,
+            "sample_steps": self.sample_steps,
+            "if_sr": str(self.if_sr),  # 将布尔值转换为字符串
+        }
+
+
+        try:
+            # 使用 aiohttp 进行异步请求，避免阻塞事件循环
+            timeout = aiohttp.ClientTimeout(total=self.tts_timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(self.url, params=request_params) as resp:
+                    if resp.status == 200:
+                        content = await resp.read()
+                        if output_file:
+                            with open(output_file, "wb") as file:
+                                file.write(content)
+                        else:
+                            return content
+                    else:
+                        error_text = await resp.text()
+                        error_msg = f"GPT_SoVITS_V3 TTS请求失败: {resp.status} - {error_text}"
+                        logger.bind(tag=TAG).error(error_msg)
+                        raise Exception(error_msg)
+        except asyncio.TimeoutError:
+            error_msg = f"GPT_SoVITS_V3 TTS请求超时（超过{self.tts_timeout}秒）: {text[:50]}..."
+            logger.bind(tag=TAG).error(error_msg)
+            raise Exception(error_msg)
+        except aiohttp.ClientError as e:
+            error_msg = f"GPT_SoVITS_V3 TTS网络请求失败: {str(e)}"
+            logger.bind(tag=TAG).error(error_msg)
+            raise Exception(error_msg)
+        except Exception as e:
+            error_msg = f"GPT_SoVITS_V3 TTS请求失败: {str(e)}"
+
+            logger.bind(tag=TAG).error(error_msg)
+            raise Exception(error_msg)

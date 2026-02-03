@@ -1,0 +1,10 @@
+ed76d459636c2481aec828516c1b4f54:
+  file_path: config/assets/wakeup_words/ed76d459636c2481aec828516c1b4f54.wav
+  text: 嘿呀～嗨嗨嗨，今天心情咋样？笑死~
+  time: 1756882026.1089902
+  voice: zh-CN-XiaoxiaoNeural
+fc7f98b9f78c7b0cc673db5b4a60acfd:
+  file_path: config/assets/wakeup_words/fc7f98b9f78c7b0cc673db5b4a60acfd.wav
+  text: 哎呀，你好！不是在做梦吧？ORLDOLLO在这里啦～
+  time: 1756945976.0222957
+  voice: zh-CN-YunyangNeural

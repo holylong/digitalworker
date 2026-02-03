@@ -1,0 +1,21 @@
+[Unit]
+Description=Voice Control Server
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/skyer/WorkStation/texo_server/texo_ai/voicectl_server
+Environment="PATH=/home/skyer/WorkStation/texo_server/texo_ai/voicectl_server/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+RestartSec=3
+StandardOutput=append:tmp/server_stdout.log
+StandardError=append:tmp/server_stderr.log
+
+# 如果进程在10秒内重启超过5次，则放弃重启
+StartLimitInterval=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

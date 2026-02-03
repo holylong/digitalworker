@@ -1,0 +1,1 @@
+./packages/opencode/dist/opencode-linux-x64/bin/opencode remote --port 8081 --hostname 0.0.0.0

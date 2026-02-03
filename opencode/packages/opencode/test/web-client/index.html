@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCode Web Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .config-panel {
+            padding: 15px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .config-panel input {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .config-panel button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .config-panel button:hover {
+            background: #5a67d8;
+        }
+
+        .config-panel button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.assistant .avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.user .avatar {
+            background: #e2e8f0;
+        }
+
+        .message-content {
+            max-width: 70%;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.assistant .message-bubble {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-top-left-radius: 4px;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-wrapper textarea {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            max-height: 120px;
+        }
+
+        .input-wrapper textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            padding: 6px 12px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-action:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .tool-use {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .tool-use strong {
+            color: #92400e;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border-left: 3px solid #ef4444;
+            padding: 12px;
+            border-radius: 6px;
+            color: #991b1b;
+        }
+
+        .system-message {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3 {
+            margin: 12px 0 8px;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .markdown-content code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 OpenCode Web Client</h1>
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">连接中...</span>
+            </div>
+        </div>
+
+        <div class="config-panel">
+            <input type="text" id="serverUrl" placeholder="服务器 URL" value="http://localhost:4096">
+            <input type="text" id="username" placeholder="用户名" value="opencode" style="max-width: 150px;">
+            <input type="password" id="password" placeholder="密码（可选）" style="max-width: 150px;">
+            <button onclick="connectToServer()">连接</button>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="system-message">欢迎使用 OpenCode Web Client</div>
+            <div class="system-message">请先配置服务器地址并连接，然后开始对话</div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea
+                    id="messageInput"
+                    placeholder="输入你的消息... (Shift+Enter 换行, Enter 发送)"
+                    rows="3"
+                    onkeydown="handleKeyPress(event)"
+                ></textarea>
+                <button class="send-button" id="sendButton" onclick="sendMessage()" disabled>发送</button>
+            </div>
+            <div class="quick-actions">
+                <button class="quick-action" onclick="sendQuickMessage('帮我列出当前目录的文件')">列出文件</button>
+                <button class="quick-action" onclick="sendQuickMessage('创建一个简单的 REST API')">创建 API</button>
+                <button class="quick-action" onclick="sendQuickMessage('帮我写一个测试用例')">写测试</button>
+                <button class="quick-action" onclick="sendQuickMessage('帮我修复这个 bug')">修复 Bug</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let serverUrl = 'http://localhost:4096';
+        let username = 'opencode';
+        let password = '';
+        let isConnected = false;
+        let eventSource = null;
+        let currentSessionId = null;
+        let pendingMessages = new Map();
+
+        // 从 localStorage 加载配置
+        function loadConfig() {
+            serverUrl = localStorage.getItem('opencode_server_url') || 'http://localhost:4096';
+            username = localStorage.getItem('opencode_username') || 'opencode';
+            password = localStorage.getItem('opencode_password') || '';
+
+            document.getElementById('serverUrl').value = serverUrl;
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+        }
+
+        // 保存配置到 localStorage
+        function saveConfig() {
+            serverUrl = document.getElementById('serverUrl').value;
+            username = document.getElementById('username').value;
+            password = document.getElementById('password').value;
+
+            localStorage.setItem('opencode_server_url', serverUrl);
+            localStorage.setItem('opencode_username', username);
+            localStorage.setItem('opencode_password', password);
+        }
+
+        // 获取认证头
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (username && password) {
+                headers['Authorization'] = 'Basic ' + btoa(username + ':' + password);
+            }
+            return headers;
+        }
+
+        // 连接到服务器
+        async function connectToServer() {
+            saveConfig();
+
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const sendButton = document.getElementById('sendButton');
+
+            statusDot.className = 'status-dot';
+            statusText.textContent = '连接中...';
+            sendButton.disabled = true;
+
+            try {
+                // 测试连接
+                const response = await fetch(`${serverUrl}/remote/health`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('服务器连接成功:', data);
+
+                    isConnected = true;
+                    statusDot.className = 'status-dot';
+                    statusText.textContent = '已连接';
+                    sendButton.disabled = false;
+
+                    // 连接 SSE 事件流
+                    connectEventStream();
+
+                    addSystemMessage('已连接到服务器 ' + serverUrl);
+                } else {
+                    throw new Error('连接失败: ' + response.status);
+                }
+            } catch (error) {
+                console.error('连接错误:', error);
+                isConnected = false;
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = '连接失败';
+                sendButton.disabled = true;
+
+                addSystemMessage('连接失败: ' + error.message);
+            }
+        }
+
+        // 连接 SSE 事件流
+        function connectEventStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            let eventUrl = `${serverUrl}/event`;
+
+            // 如果有密码，添加认证
+            if (username && password) {
+                const auth = btoa(username + ':' + password);
+                // 注意：SSE 不支持自定义 header，需要通过 URL 传递
+                eventUrl += `?auth=${encodeURIComponent(auth)}`;
+            }
+
+            eventSource = new EventSource(eventUrl);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('收到事件:', data);
+                    handleEvent(data);
+                } catch (e) {
+                    console.error('解析事件失败:', e);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE 错误:', error);
+                // 如果是基本认证问题，提示用户
+                if (password) {
+                    addSystemMessage('注意：SSE 可能不支持基本认证，某些功能可能受限');
+                }
+            };
+
+            eventSource.onopen = () => {
+                console.log('SSE 连接已建立');
+            };
+        }
+
+        // 处理事件
+        function handleEvent(event) {
+            const { type, properties } = event;
+
+            switch (type) {
+                case 'server.connected':
+                    addSystemMessage('事件流已连接');
+                    break;
+
+                case 'message.part.updated':
+                    handlePartUpdated(properties);
+                    break;
+
+                case 'session.error':
+                    handleError(properties);
+                    break;
+
+                case 'session.idle':
+                    hideTypingIndicator();
+                    break;
+
+                default:
+                    console.log('未处理的事件类型:', type);
+            }
+        }
+
+        // 处理消息部分更新
+        function handlePartUpdated(part) {
+            if (!part.sessionID) return;
+
+            // 如果是 AI 的文本回复
+            if (part.type === 'text' && part.state?.text) {
+                updateAssistantMessage(part.sessionID, part.state.text, part.state.end);
+            }
+
+            // 如果是工具使用
+            if (part.type === 'tool' && part.state?.status === 'completed') {
+                addToolUse(part.sessionID, part.tool, part.state);
+            }
+
+            // 如果开始执行，显示 typing 指示器
+            if (part.type === 'step-start') {
+                showTypingIndicator();
+            }
+        }
+
+        // 更新助手消息
+        function updateAssistantMessage(sessionId, text, isComplete) {
+            let messageDiv = document.getElementById(`msg-${sessionId}`);
+
+            if (!messageDiv) {
+                messageDiv = createAssistantMessage(sessionId, '');
+                document.getElementById('chatContainer').appendChild(messageDiv);
+            }
+
+            const contentDiv = messageDiv.querySelector('.message-bubble');
+            contentDiv.innerHTML = formatMarkdown(text);
+
+            if (isComplete) {
+                hideTypingIndicator();
+                scrollToBottom();
+            } else {
+                scrollToBottom();
+            }
+        }
+
+        // 创建助手消息元素
+        function createAssistantMessage(sessionId, initialText = '') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.id = `msg-${sessionId}`;
+            messageDiv.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-bubble markdown-content">${formatMarkdown(initialText)}</div>
+                </div>
+            `;
+            return messageDiv;
+        }
+
+        // 添加工具使用信息
+        function addToolUse(sessionId, toolName, state) {
+            let messageDiv = document.getElementById(`msg-${sessionId}`);
+
+            if (!messageDiv) {
+                messageDiv = createAssistantMessage(sessionId, '');
+                document.getElementById('chatContainer').appendChild(messageDiv);
+            }
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            const toolDiv = document.createElement('div');
+            toolDiv.className = 'tool-use';
+
+            const title = state.title || (Object.keys(state.input || {}).length > 0
+                ? JSON.stringify(state.input)
+                : toolName);
+
+            toolDiv.innerHTML = `<strong>使用工具:</strong> ${toolName}<br><strong>参数:</strong> ${title}`;
+
+            if (state.output) {
+                const outputDiv = document.createElement('div');
+                outputDiv.className = 'code-block';
+                outputDiv.textContent = state.output;
+                toolDiv.appendChild(outputDiv);
+            }
+
+            contentDiv.appendChild(toolDiv);
+            scrollToBottom();
+        }
+
+        // 处理错误
+        function handleError(properties) {
+            if (!properties.sessionID || !properties.error) return;
+
+            let messageDiv = document.getElementById(`msg-${properties.sessionID}`);
+
+            if (!messageDiv) {
+                messageDiv = createAssistantMessage(properties.sessionID, '');
+                document.getElementById('chatContainer').appendChild(messageDiv);
+            }
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = '错误: ' + (
+                properties.error.data?.message ||
+                properties.error.message ||
+                String(properties.error)
+            );
+            contentDiv.appendChild(errorDiv);
+
+            hideTypingIndicator();
+            scrollToBottom();
+        }
+
+        // 显示 typing 指示器
+        function showTypingIndicator() {
+            let indicator = document.getElementById('typing-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'message assistant';
+                indicator.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('chatContainer').appendChild(indicator);
+            }
+            scrollToBottom();
+        }
+
+        // 隐藏 typing 指示器
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // 格式化 Markdown (简单版本)
+        function formatMarkdown(text) {
+            if (!text) return '';
+
+            return text
+                // 代码块
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, '<div class="code-block"><pre><code>$2</code></pre></div>')
+                // 行内代码
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                // 粗体
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                // 斜体
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                // 链接
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                // 换行
+                .replace(/\n/g, '<br>');
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message || !isConnected) return;
+
+            // 添加用户消息到聊天界面
+            addUserMessage(message);
+
+            // 清空输入框
+            input.value = '';
+
+            // 禁用发送按钮
+            document.getElementById('sendButton').disabled = true;
+
+            try {
+                showTypingIndicator();
+
+                // 使用当前会话 ID 或创建新会话
+                const requestBody = {
+                    type: 'prompt',
+                    message: message,
+                    sessionID: currentSessionId || undefined
+                };
+
+                const response = await fetch(`${serverUrl}/remote/execute`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 保存会话 ID
+                    currentSessionId = result.sessionID;
+                    console.log('消息已发送, 会话 ID:', currentSessionId);
+
+                    // 如果有立即返回的数据，显示它
+                    if (result.data && result.data.parts) {
+                        for (const part of result.data.parts) {
+                            if (part.type === 'text' && part.text) {
+                                updateAssistantMessage(currentSessionId, part.text, true);
+                            }
+                        }
+                    }
+                } else {
+                    throw new Error(result.error || '发送失败');
+                }
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                hideTypingIndicator();
+                addSystemMessage('发送失败: ' + error.message);
+            } finally {
+                // 重新启用发送按钮
+                document.getElementById('sendButton').disabled = false;
+                document.getElementById('messageInput').focus();
+            }
+        }
+
+        // 添加用户消息
+        function addUserMessage(text) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="avatar">👤</div>
+                <div class="message-content">
+                    <div class="message-bubble">${escapeHtml(text)}</div>
+                    <div class="message-meta">${getCurrentTime()}</div>
+                </div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 添加系统消息
+        function addSystemMessage(text) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'system-message';
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 发送快捷消息
+        function sendQuickMessage(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+
+        // 处理按键
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 获取当前时间
+        function getCurrentTime() {
+            return new Date().toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 初始化
+        window.onload = function() {
+            loadConfig();
+            // 自动连接
+            if (localStorage.getItem('opencode_auto_connect') === 'true') {
+                connectToServer();
+            }
+        };
+
+        // 页面卸载时关闭连接
+        window.onbeforeunload = function() {
+            if (eventSource) {
+                eventSource.close();
+            }
+        };
+    </script>
+</body>
+</html>
