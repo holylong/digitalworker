@@ -41,6 +41,7 @@ import { PermissionRoutes } from "./routes/permission"
 import { GlobalRoutes } from "./routes/global"
 import { RemoteRoutes } from "./routes/remote"
 import { MDNS } from "./mdns"
+import { UserRoutes } from "./routes/api-example"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -244,6 +245,7 @@ export namespace Server {
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
         .route("/remote", RemoteRoutes())
+        .route("/api/users", UserRoutes())
         .route("/", FileRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
@@ -552,6 +554,11 @@ export namespace Server {
         )
         .all("/*", async (c) => {
           const path = c.req.path
+
+          // Skip proxy for API routes
+          if (path.startsWith("/api/") || path.startsWith("/auth/") || path.startsWith("/doc")) {
+            return c.json({ error: "API route not found" }, 404)
+          }
 
           const response = await proxy(`https://app.opencode.ai${path}`, {
             ...c.req,
