@@ -196,7 +196,8 @@ class OpenCodeRepository {
         val messages = _messages.value.toMutableList()
         messages.add(ChatMessage.User(
             id = "user-${System.currentTimeMillis()}",
-            text = text
+            text = text,
+            timestamp = System.currentTimeMillis()
         ))
         _messages.value = messages
     }
@@ -209,7 +210,11 @@ class OpenCodeRepository {
                 messages[existingIndex] = msg.copy(text = text)
             }
         } else {
-            messages.add(ChatMessage.Assistant(id = id, text = text))
+            messages.add(ChatMessage.Assistant(
+                id = id,
+                text = text,
+                timestamp = System.currentTimeMillis()
+            ))
         }
         _messages.value = messages
     }
@@ -241,7 +246,8 @@ class OpenCodeRepository {
         val messages = _messages.value.toMutableList()
         messages.add(ChatMessage.System(
             id = "system-${System.currentTimeMillis()}",
-            text = text
+            text = text,
+            timestamp = System.currentTimeMillis()
         ))
         _messages.value = messages
     }

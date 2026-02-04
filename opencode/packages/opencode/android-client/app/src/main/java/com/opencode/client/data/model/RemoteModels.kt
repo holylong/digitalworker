@@ -137,23 +137,25 @@ data class ServerEvent(
 
 // UI Models
 sealed class ChatMessage {
+    abstract val timestamp: Long
+
     data class User(
         val id: String,
         val text: String,
-        val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long
     ) : ChatMessage()
 
     data class Assistant(
         val id: String,
         val text: String,
         val toolUses: List<ToolUseItem> = emptyList(),
-        val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long
     ) : ChatMessage()
 
     data class System(
         val id: String,
         val text: String,
-        val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long
     ) : ChatMessage()
 }
 

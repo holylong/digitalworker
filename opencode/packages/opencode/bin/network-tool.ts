@@ -2,7 +2,7 @@
 import { NetworkScanner, type ScanOptions } from "../src/network/network-scanner.js"
 
 export class ScanTool {
-  private scanner: NetworkScanner
+  public scanner: NetworkScanner
 
   constructor(options: Partial<ScanOptions> = {}) {
     this.scanner = new NetworkScanner(options)

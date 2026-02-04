@@ -93,17 +93,16 @@ export class NetworkScanner {
   }
 
   private async pingHost(ip: string): Promise<void> {
-    return new Promise((resolve) => {
-      const socket = createSocket("udp4")
-      const startTime = Date.now()
-
-      socket.on("error", () => {
-        socket.close()
-        resolve()
+    try {
+      // 使用系统ping命令，更可靠
+      const { stdout, stderr } = await execAsync(`ping -c 1 -W ${this.options.timeout / 1000} ${ip}`, {
+        timeout: this.options.timeout,
       })
 
-      socket.on("message", () => {
-        const responseTime = Date.now() - startTime
+      // 检查ping是否成功
+      if (!stderr && stdout.includes("bytes from")) {
+        const timeMatch = stdout.match(/time[=<](\d+(?:\.\d+)?)\s*ms/)
+        const responseTime = timeMatch ? parseFloat(timeMatch[1]) : undefined
 
         this.devices.set(ip, {
           ip,
@@ -111,18 +110,18 @@ export class NetworkScanner {
           responseTime,
           openPorts: [],
         })
-
-        socket.close()
-        resolve()
-      })
-
-      setTimeout(() => {
-        socket.close()
-        resolve()
-      }, this.options.timeout)
-
-      socket.send("", 0, 0, 7, ip)
-    })
+      }
+    } catch (error) {
+      // ping失败，设备可能离线
+      // 但我们仍然设置设备信息，只是标记为离线
+      if (!this.devices.has(ip)) {
+        this.devices.set(ip, {
+          ip,
+          up: false,
+          openPorts: [],
+        })
+      }
+    }
   }
 
   private async deepScan(): Promise<void> {
@@ -156,7 +155,7 @@ export class NetworkScanner {
       const { stdout } = await execAsync("arp -a")
 
       for (const device of devices) {
-        const match = stdout.match(new RegExp(`\\(${device.ip}\\) at ([\\da-fA-F:]+)`))
+        const match = stdout.match(new RegExp(`\\(${device.ip}\\).*at ([\\da-fA-F:]+)`))
         if (match) {
           device.mac = match[1]
         }

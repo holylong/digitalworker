@@ -15,7 +15,7 @@ class ChatViewModel(
     private val TAG = "ChatViewModel"
 
     // Connection config
-    private val _serverUrl = MutableStateFlow("http://localhost:4096")
+    private val _serverUrl = MutableStateFlow("http://10.184.60.127:4096")
     val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
 
     private val _username = MutableStateFlow("opencode")
@@ -30,7 +30,7 @@ class ChatViewModel(
 
     val messages: StateFlow<List<ChatMessage>> = repository.messages
 
-    val workspaceInfo: StateFlow<WorkspaceInfo?> = repository.workspaceInfo
+    val workspaceInfo: StateFlow<OpenCodeRepository.WorkspaceInfo?> = repository.workspaceInfo
 
     val isTyping: StateFlow<Boolean> = repository.isTyping
 

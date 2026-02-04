@@ -369,6 +369,83 @@
             margin: 10px 0;
         }
 
+        .progress-message {
+            font-size: 12px;
+            color: #6366f1;
+            margin: 4px 0;
+            padding: 4px 8px;
+            background: #f1f5f9;
+            border-left: 2px solid #6366f1;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .tool-start {
+            background: #dbeafe;
+            border-left: 3px solid #3b82f6;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-start::before {
+            content: '🔧';
+            font-size: 14px;
+        }
+
+        .tool-complete {
+            background: #d1fae5;
+            border-left: 3px solid #10b981;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-complete::before {
+            content: '✅';
+            font-size: 14px;
+        }
+
+        .tool-error {
+            background: #fee2e2;
+            border-left: 3px solid #ef4444;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-error::before {
+            content: '❌';
+            font-size: 14px;
+        }
+
+        .think-message {
+            font-style: italic;
+            color: #7c3aed;
+            background: #f3e8ff;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            border-left: 2px solid #a855f7;
+        }
+
+        .think-message::before {
+            content: '💭 ';
+        }
+
         .markdown-content h1,
         .markdown-content h2,
         .markdown-content h3 {
@@ -624,19 +701,63 @@
                 displayId = messageDisplayMap.get(part.sessionID) || part.sessionID;
             }
 
-            // 如果是 AI 的文本回复
-            if (part.type === 'text' && part.state?.text) {
-                updateAssistantMessage(displayId, part.state.text, part.state.end);
-            }
+            // 处理不同类型的事件
+            switch (part.type) {
+                case 'text':
+                    // AI 的文本回复
+                    if (part.state?.text) {
+                        updateAssistantMessage(displayId, part.state.text, part.state.end);
+                    }
+                    break;
 
-            // 如果是工具使用
-            if (part.type === 'tool' && part.state?.status === 'completed') {
-                addToolUse(displayId, part.tool, part.state);
-            }
+                case 'tool':
+                    // 工具调用
+                    if (part.state?.status === 'started') {
+                        addToolStart(displayId, part.tool, part.state);
+                    } else if (part.state?.status === 'completed') {
+                        addToolComplete(displayId, part.tool, part.state);
+                    } else if (part.state?.status === 'failed') {
+                        addToolError(displayId, part.tool, part.state);
+                    }
+                    break;
 
-            // 如果开始执行，显示 typing 指示器
-            if (part.type === 'step-start') {
-                showTypingIndicator();
+                case 'step-start':
+                    // 开始执行
+                    showTypingIndicator();
+                    addProgressMessage(displayId, '🔄 开始处理...');
+                    break;
+
+                case 'step-end':
+                    // 执行结束
+                    addProgressMessage(displayId, '✅ 执行完成');
+                    break;
+
+                case 'file-read':
+                    // 文件读取
+                    addProgressMessage(displayId, `📖 读取文件: ${part.path || part.filename || ''}`);
+                    break;
+
+                case 'file-write':
+                    // 文件写入
+                    addProgressMessage(displayId, `✍️  写入文件: ${part.path || part.filename || ''}`);
+                    break;
+
+                case 'shell':
+                    // Shell 命令执行
+                    if (part.state?.command) {
+                        addProgressMessage(displayId, `💻 执行: ${part.state.command}`);
+                    }
+                    break;
+
+                case 'think':
+                    // AI 思考
+                    if (part.state?.text) {
+                        addThinkMessage(displayId, part.state.text);
+                    }
+                    break;
+
+                default:
+                    console.log('未处理的事件类型:', part.type, part);
             }
         }
 
@@ -845,6 +966,12 @@
                     // 使用 displayId 创建 AI 回复消息元素
                     createAssistantMessage(displayId, '');
 
+                    // 立即显示接收确认
+                    addProgressMessage(displayId, '⏳ 消息已接收，正在处理...');
+
+                    // 隐藏 typing 指示器
+                    hideTypingIndicator();
+
                     // 显示项目目录信息
                     if (result.projectDir) {
                         addSystemMessage('📁 项目目录: ' + result.projectDir);
@@ -895,6 +1022,65 @@
             messageDiv.className = 'system-message';
             messageDiv.textContent = text;
             chatContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 添加进度消息
+        function addProgressMessage(sessionId, text) {
+            let messageDiv = document.getElementById(`msg-${sessionId}`);
+
+            if (!messageDiv) {
+                messageDiv = createAssistantMessage(sessionId, '');
+            }
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'progress-message';
+            progressDiv.innerHTML = `<span style="color: #94a3b8; font-size: 11px;">[${getCurrentTime()}]</span> ${text}`;
+            contentDiv.appendChild(progressDiv);
+            scrollToBottom();
+        }
+
+        // 添加工具开始
+        function addToolStart(sessionId, toolName, state) {
+            addProgressMessage(sessionId, `🔧 执行工具: ${toolName}`);
+            if (state.input) {
+                addProgressMessage(sessionId, `   参数: ${JSON.stringify(state.input).substring(0, 100)}`);
+            }
+        }
+
+        // 添加工具完成
+        function addToolComplete(sessionId, toolName, state) {
+            addProgressMessage(sessionId, `✅ 工具完成: ${toolName}`);
+            if (state.output) {
+                const output = state.output;
+                if (typeof output === 'string' && output.length > 0) {
+                    addProgressMessage(sessionId, `   输出: ${output.substring(0, 100)}${output.length > 100 ? '...' : ''}`);
+                }
+            }
+        }
+
+        // 添加工具错误
+        function addToolError(sessionId, toolName, state) {
+            addProgressMessage(sessionId, `❌ 工具失败: ${toolName}`);
+            if (state.error) {
+                addProgressMessage(sessionId, `   错误: ${state.error}`);
+            }
+        }
+
+        // 添加思考消息
+        function addThinkMessage(sessionId, text) {
+            let messageDiv = document.getElementById(`msg-${sessionId}`);
+
+            if (!messageDiv) {
+                messageDiv = createAssistantMessage(sessionId, '');
+            }
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            const thinkDiv = document.createElement('div');
+            thinkDiv.className = 'think-message';
+            thinkDiv.textContent = text.substring(0, 200);
+            contentDiv.appendChild(thinkDiv);
             scrollToBottom();
         }
 

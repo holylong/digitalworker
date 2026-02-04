@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.opencode.client.app-merged_res-55:/drawable_ic_launcher.xml.flat",
+        "source": "com.opencode.client.app-main-57:/drawable/ic_launcher.xml"
+    },
+    {
+        "merged": "/home/skyer/.gradle/daemon/8.13/com.opencode.client.app-merged_res-55:/xml_data_extraction_rules.xml.flat",
+        "source": "/home/skyer/.gradle/daemon/8.13/com.opencode.client.app-main-57:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.opencode.client.app-merged_res-55:/mipmap-anydpi-v26_ic_launcher_foreground.xml.flat",
+        "source": "com.opencode.client.app-main-57:/mipmap-anydpi-v26/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.opencode.client.app-merged_res-55:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.opencode.client.app-main-57:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.opencode.client.app-merged_res-55:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.opencode.client.app-main-57:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/home/skyer/.gradle/daemon/8.13/com.opencode.client.app-merged_res-55:/xml_backup_rules.xml.flat",
+        "source": "/home/skyer/.gradle/daemon/8.13/com.opencode.client.app-main-57:/xml/backup_rules.xml"
+    }
+]

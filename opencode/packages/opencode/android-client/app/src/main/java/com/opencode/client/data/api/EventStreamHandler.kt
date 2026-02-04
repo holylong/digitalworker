@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
@@ -40,9 +41,9 @@ class EventStreamHandler(private val config: ConnectionConfig) {
             .url(url)
             .build()
 
-        eventSource = EventSources.createFactory()
+        eventSource = EventSources.createFactory(client!!)
             .newEventSource(request, object : EventSourceListener() {
-                override fun onOpen(eventSource: EventSource) {
+                override fun onOpen(eventSource: EventSource, response: Response) {
                     Log.d(TAG, "SSE connection opened")
                 }
 
@@ -79,7 +80,7 @@ class EventStreamHandler(private val config: ConnectionConfig) {
                 override fun onFailure(
                     eventSource: EventSource,
                     t: Throwable?,
-                    response: okhttp3.Response?
+                    response: Response?
                 ) {
                     Log.e(TAG, "SSE connection failed", t)
                     _eventChannel.close(t)
