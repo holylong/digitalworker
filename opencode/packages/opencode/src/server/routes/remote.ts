@@ -444,5 +444,55 @@ export const RemoteRoutes = () => {
     },
   )
 
+  // Get session messages
+  app.get(
+    "/messages/:sessionID",
+    describeRoute({
+      summary: "Get session messages",
+      description: "Retrieve all messages in a session, including user prompts and AI responses",
+      operationId: "remote.messages",
+      responses: {
+        200: {
+          description: "List of messages",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({
+                  success: z.boolean(),
+                  data: z.array(z.any()),
+                  sessionID: z.string(),
+                }),
+              ),
+            },
+          },
+        },
+        ...errors(400, 404, 500),
+      },
+    }),
+    async (c) => {
+      try {
+        const sessionID = c.req.param("sessionID")
+        log.info("messages", { sessionID })
+
+        const messages = await Session.messages({ sessionID })
+
+        return c.json({
+          success: true,
+          data: messages,
+          sessionID,
+        })
+      } catch (error) {
+        log.error("messages error", { error })
+        return c.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          500,
+        )
+      }
+    },
+  )
+
   return app
 }

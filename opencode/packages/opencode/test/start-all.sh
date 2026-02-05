@@ -41,17 +41,67 @@ fi
 echo -e "${GREEN}✓${NC} 找到 opencode 二进制文件"
 echo ""
 
+# 检查端口是否已被占用
+check_port() {
+    local port=$1
+    local name=$2
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        local pid=$(lsof -Pi :$port -sTCP:LISTEN -t)
+        echo -e "${YELLOW}⚠${NC} 端口 $port 已被占用 (PID: $pid)"
+        echo -e "${YELLOW}  这意味着 $name 可能已经在运行${NC}"
+        return 0
+    fi
+    return 1
+}
+
+# 检查服务是否已运行
+OPENCODE_RUNNING=false
+WEB_RUNNING=false
+
+if check_port $OPENCODE_PORT "OpenCode 服务器"; then
+    OPENCODE_RUNNING=true
+fi
+
+if check_port $WEB_PORT "Web 服务器"; then
+    WEB_RUNNING=true
+fi
+
+if $OPENCODE_RUNNING && $WEB_RUNNING; then
+    echo ""
+    echo -e "${GREEN}======================================${NC}"
+    echo -e "${GREEN}服务已在运行！${NC}"
+    echo -e "${GREEN}======================================${NC}"
+    echo ""
+    echo -e "${BLUE}访问地址:${NC}"
+    echo ""
+    echo -e "  本地访问:"
+    echo -e "    ${CYAN}http://localhost:$WEB_PORT${NC}"
+    echo ""
+    echo -e "  网络访问:"
+    echo -e "    ${CYAN}http://$(hostname -I | awk '{print $1}'):$WEB_PORT${NC}"
+    echo ""
+    echo -e "${YELLOW}查看日志:${NC}"
+    echo -e "  OpenCode: ${CYAN}tail -f /tmp/opencode-remote.log${NC}"
+    echo -e "  Web 客户端: ${CYAN}tail -f /tmp/web-client.log${NC}"
+    echo ""
+    echo -e "${YELLOW}停止服务:${NC}"
+    echo -e "  运行: ${CYAN}./stop-all.sh${NC}"
+    echo ""
+    exit 0
+fi
+
 # 清理函数
 cleanup() {
     echo ""
-    echo -e "${YELLOW}正在停止所有服务...${NC}"
+    echo -e "${YELLOW}正在停止本次启动的服务...${NC}"
 
+    # 只停止本次脚本启动的进程
     if [ -n "$OPENCODE_PID" ]; then
-        kill $OPENCODE_PID 2>/dev/null && echo -e "${GREEN}✓${NC} OpenCode 服务器已停止"
+        kill $OPENCODE_PID 2>/dev/null && echo -e "${GREEN}✓${NC} OpenCode 服务器已停止" || true
     fi
 
     if [ -n "$WEB_PID" ]; then
-        kill $WEB_PID 2>/dev/null && echo -e "${GREEN}✓${NC} Web 服务器已停止"
+        kill $WEB_PID 2>/dev/null && echo -e "${GREEN}✓${NC} Web 服务器已停止" || true
     fi
 
     # 等待进程结束
@@ -61,52 +111,56 @@ cleanup() {
 
 trap cleanup INT TERM EXIT
 
-# 启动 opencode 服务器
-echo -e "${YELLOW}正在启动 OpenCode 远程服务器...${NC}"
-if [ -z "$OPENCODE_PASSWORD" ]; then
-    echo -e "${YELLOW}警告: 未设置 OPENCODE_PASSWORD，服务器将不安全${NC}"
-    echo -e "${YELLOW}      设置密码: export OPENCODE_PASSWORD=your_password${NC}"
-fi
-
-nohup "$OPENCODE_BIN" remote --port $OPENCODE_PORT --hostname $OPENCODE_HOST > /tmp/opencode-remote.log 2>&1 &
-OPENCODE_PID=$!
-
-echo -e "${GREEN}✓${NC} OpenCode 服务器已启动 (PID: $OPENCODE_PID)"
-echo -e "  日志文件: ${BLUE}/tmp/opencode-remote.log${NC}"
-
-# 等待 OpenCode 服务器启动
-echo -e "${YELLOW}等待 OpenCode 服务器就绪...${NC}"
-for i in {1..30}; do
-    if curl -s http://localhost:$OPENCODE_PORT/remote/health >/dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} OpenCode 服务器已就绪!"
-        break
+# 启动 opencode 服务器（如果未运行）
+if ! $OPENCODE_RUNNING; then
+    echo -e "${YELLOW}正在启动 OpenCode 远程服务器...${NC}"
+    if [ -z "$OPENCODE_PASSWORD" ]; then
+        echo -e "${YELLOW}警告: 未设置 OPENCODE_PASSWORD，服务器将不安全${NC}"
+        echo -e "${YELLOW}      设置密码: export OPENCODE_PASSWORD=your_password${NC}"
     fi
-    sleep 1
-done
-echo ""
 
-# 启动 Web 客户端 HTTP 服务器
-echo -e "${YELLOW}正在启动 Web 客户端 HTTP 服务器...${NC}"
+    nohup "$OPENCODE_BIN" remote --port $OPENCODE_PORT --hostname $OPENCODE_HOST > /tmp/opencode-remote.log 2>&1 &
+    OPENCODE_PID=$!
 
-WEB_CLIENT_DIR="$SCRIPT_DIR/web-client"
-cd "$WEB_CLIENT_DIR"
+    echo -e "${GREEN}✓${NC} OpenCode 服务器已启动 (PID: $OPENCODE_PID)"
+    echo -e "  日志文件: ${BLUE}/tmp/opencode-remote.log${NC}"
 
-if command -v python3 >/dev/null 2>&1; then
-    nohup python3 -m http.server $WEB_PORT > /tmp/web-client.log 2>&1 &
-    WEB_PID=$!
-    echo -e "${GREEN}✓${NC} Web 服务器已启动 (PID: $WEB_PID, Python 3)"
-elif command -v python >/dev/null 2>&1; then
-    nohup python -m SimpleHTTPServer $WEB_PORT > /tmp/web-client.log 2>&1 &
-    WEB_PID=$!
-    echo -e "${GREEN}✓${NC} Web 服务器已启动 (PID: $WEB_PID, Python 2)"
-else
-    echo -e "${RED}错误: 找不到 Python，无法启动 Web 服务器${NC}"
-    echo -e "${YELLOW}请安装 Python: sudo apt-get install python3${NC}"
-    exit 1
+    # 等待 OpenCode 服务器启动
+    echo -e "${YELLOW}等待 OpenCode 服务器就绪...${NC}"
+    for i in {1..30}; do
+        if curl -s http://localhost:$OPENCODE_PORT/remote/health >/dev/null 2>&1; then
+            echo -e "${GREEN}✓${NC} OpenCode 服务器已就绪!"
+            break
+        fi
+        sleep 1
+    done
+    echo ""
 fi
 
-echo -e "  日志文件: ${BLUE}/tmp/web-client.log${NC}"
-echo ""
+# 启动 Web 客户端 HTTP 服务器（如果未运行）
+if ! $WEB_RUNNING; then
+    echo -e "${YELLOW}正在启动 Web 客户端 HTTP 服务器...${NC}"
+
+    WEB_CLIENT_DIR="$SCRIPT_DIR/web-client"
+    cd "$WEB_CLIENT_DIR"
+
+    if command -v python3 >/dev/null 2>&1; then
+        nohup python3 -m http.server $WEB_PORT > /tmp/web-client.log 2>&1 &
+        WEB_PID=$!
+        echo -e "${GREEN}✓${NC} Web 服务器已启动 (PID: $WEB_PID, Python 3)"
+    elif command -v python >/dev/null 2>&1; then
+        nohup python -m SimpleHTTPServer $WEB_PORT > /tmp/web-client.log 2>&1 &
+        WEB_PID=$!
+        echo -e "${GREEN}✓${NC} Web 服务器已启动 (PID: $WEB_PID, Python 2)"
+    else
+        echo -e "${RED}错误: 找不到 Python，无法启动 Web 服务器${NC}"
+        echo -e "${YELLOW}请安装 Python: sudo apt-get install python3${NC}"
+        exit 1
+    fi
+
+    echo -e "  日志文件: ${BLUE}/tmp/web-client.log${NC}"
+    echo ""
+fi
 
 # 获取本机 IP
 LOCAL_IP=$(hostname -I | awk '{print $1}')
@@ -122,7 +176,6 @@ echo -e "    ${CYAN}http://localhost:$WEB_PORT${NC}"
 echo ""
 echo -e "  网络访问 (可以从其他设备访问):"
 echo -e "    ${CYAN}http://$LOCAL_IP:$WEB_PORT${NC}"
-echo -e "    ${CYAN}http://10.184.60.127:$WEB_PORT${NC}"
 echo ""
 echo -e "${BLUE}OpenCode 服务器配置:${NC}"
 echo -e "  地址: ${CYAN}http://localhost:$OPENCODE_PORT${NC}"
@@ -136,6 +189,13 @@ echo -e "     - 用户名: ${CYAN}opencode${NC}"
 echo -e "     - 密码: ${CYAN}${OPENCODE_PASSWORD:+(已设置)}${NC}"
 echo -e "  3. 点击 \"连接\" 按钮"
 echo -e "  4. 开始对话!"
+echo ""
+echo -e "${YELLOW}查看实时日志:${NC}"
+echo -e "  OpenCode: ${CYAN}tail -f /tmp/opencode-remote.log${NC}"
+echo -e "  Web 客户端: ${CYAN}tail -f /tmp/web-client.log${NC}"
+echo ""
+echo -e "${YELLOW}停止服务:${NC}"
+echo -e "  运行: ${CYAN}./stop-all.sh${NC}"
 echo ""
 
 # 尝试自动打开浏览器
@@ -152,9 +212,64 @@ fi
 echo ""
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}服务运行中...${NC}"
-echo -e "${YELLOW}按 Ctrl+C 停止所有服务${NC}"
+echo -e "${YELLOW}按 Ctrl+C 查看菜单${NC}"
 echo -e "${YELLOW}======================================${NC}"
 echo ""
 
-# 保持脚本运行
-wait
+# 保持脚本运行，等待用户输入
+while true; do
+    echo -e "${CYAN}按 Enter 刷新状态，输入 'logs' 查看日志，输入 'stop' 停止服务，输入 'bg' 后台运行${NC}"
+    read -t 300 input  # 5分钟超时
+
+    if [ $? -ne 0 ]; then
+        # 超时，继续等待
+        continue
+    fi
+
+    case "$input" in
+        stop)
+            cleanup
+            ;;
+        logs)
+            echo -e "${CYAN}=== OpenCode 服务器日志 (最近 20 行) ===${NC}"
+            tail -20 /tmp/opencode-remote.log
+            echo ""
+            echo -e "${CYAN}=== Web 服务器日志 (最近 20 行) ===${NC}"
+            tail -20 /tmp/web-client.log 2>/dev/null || echo "无日志"
+            echo ""
+            ;;
+        bg)
+            echo -e "${GREEN}切换到后台运行...${NC}"
+            # 移除 EXIT trap，让脚本在后台继续运行
+            trap - INT TERM EXIT
+            disown
+            exit 0
+            ;;
+        *)
+            # 刷新状态
+            clear
+            echo -e "${CYAN}======================================${NC}"
+            echo -e "${CYAN}OpenCode 服务状态${NC}"
+            echo -e "${CYAN}======================================${NC}"
+            echo ""
+
+            # 检查 OpenCode 服务器
+            if curl -s http://localhost:$OPENCODE_PORT/remote/health >/dev/null 2>&1; then
+                echo -e "${GREEN}✓${NC} OpenCode 服务器: ${GREEN}运行中${NC}"
+                echo -e "  URL: ${CYAN}http://localhost:$OPENCODE_PORT${NC}"
+            else
+                echo -e "${RED}✗${NC} OpenCode 服务器: ${RED}已停止${NC}"
+            fi
+            echo ""
+
+            # 检查 Web 服务器
+            if lsof -Pi :$WEB_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+                echo -e "${GREEN}✓${NC} Web 服务器: ${GREEN}运行中${NC}"
+                echo -e "  URL: ${CYAN}http://localhost:$WEB_PORT${NC}"
+            else
+                echo -e "${RED}✗${NC} Web 服务器: ${RED}已停止${NC}"
+            fi
+            echo ""
+            ;;
+    esac
+done
