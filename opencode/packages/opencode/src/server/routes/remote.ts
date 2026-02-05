@@ -18,40 +18,33 @@ const DEFAULT_WORKSPACE_ROOT = process.env.OPENCODE_WORKSPACE_ROOT ||
 
 // 项目名称生成器
 function generateProjectName(message: string, type: 'command' | 'prompt' | 'shell'): string {
-  // 移除特殊字符，只保留字母、数字、中文和连字符
+  // 移除特殊字符，只保留 ASCII 字母、数字和连字符
+  // 将中文字符翻译或移除
   const cleaned = message
     .toLowerCase()
-    .replace(/[^\u4e00-\u9fa5a-z0-9\s-]/gi, '')
+    // 移除所有非 ASCII 字母数字和空格
+    .replace(/[^\x00-\x7F]+/g, ' ')
+    // 替换特殊字符为空格
+    .replace(/[^\w\s-]/gi, ' ')
+    .replace(/\s+/g, '-')
     .trim()
     .substring(0, 50)
 
-  if (!cleaned) {
+  if (!cleaned || cleaned === '-') {
     return `project-${Date.now()}`
   }
 
   // 根据消息内容智能命名
   const keywords = {
     'api': 'api',
-    '接口': 'api',
     'rest': 'rest-api',
     'web': 'web-app',
-    '网站': 'website',
     'blog': 'blog',
     'cli': 'cli-tool',
-    '命令行': 'cli-tool',
     'bot': 'bot',
-    '机器人': 'bot',
     'scraper': 'scraper',
-    '爬虫': 'scraper',
     'game': 'game',
-    '游戏': 'game',
     'plugin': 'plugin',
-    '插件': 'plugin',
-    'extension': 'extension',
-    '扩展': 'extension',
-    'library': 'library',
-    '库': 'library',
-    '工具': 'tool',
     'tool': 'tool',
   }
 
@@ -62,11 +55,8 @@ function generateProjectName(message: string, type: 'command' | 'prompt' | 'shel
     }
   }
 
-  // 使用消息的前几个词作为项目名
-  const words = cleaned.split(/\s+/).slice(0, 3)
-  const projectName = words.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-
-  return projectName || `project-${Date.now()}`
+  // 使用清理后的名称
+  return `${cleaned}-${Date.now()}`
 }
 
 // 确保工作目录存在

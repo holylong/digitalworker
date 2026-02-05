@@ -670,6 +670,10 @@
                     addSystemMessage('事件流已连接');
                     break;
 
+                case 'server.heartbeat':
+                    // 心跳事件，忽略
+                    break;
+
                 case 'message.part.updated':
                     handlePartUpdated(properties);
                     break;
