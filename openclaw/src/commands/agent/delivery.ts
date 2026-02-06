@@ -18,12 +18,69 @@ import {
   normalizeOutboundPayloadsForJson,
 } from "../../infra/outbound/payloads.js";
 import { isInternalMessageChannel } from "../../utils/message-channel.js";
+import { shouldLogVerbose } from "../../globals.js";
 
 type RunResult = Awaited<
   ReturnType<(typeof import("../../agents/pi-embedded.js"))["runEmbeddedPiAgent"]>
 >;
 
 const NESTED_LOG_PREFIX = "[agent:nested]";
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+  const seconds = Math.floor(ms / 1000);
+  const milliseconds = ms % 1000;
+  if (seconds < 60) {
+    return `${seconds}.${milliseconds.toString().padStart(3, '0')}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function formatTimingStats(result: RunResult): string | null {
+  const durationMs = result.meta?.durationMs;
+  if (typeof durationMs !== 'number') {
+    return null;
+  }
+
+  const agentMeta = result.meta?.agentMeta;
+  const model = agentMeta?.model || 'unknown';
+  const provider = agentMeta?.provider || 'unknown';
+  const usage = agentMeta?.usage;
+
+  const parts: string[] = [];
+
+  // Main duration
+  parts.push(`⏱️  Duration: ${formatDuration(durationMs)}`);
+
+  // Model info
+  parts.push(`📦 Model: ${provider}/${model}`);
+
+  // Token usage if available
+  if (usage && typeof usage === 'object') {
+    const inputTokens = (usage as { input?: number }).input;
+    const outputTokens = (usage as { output?: number }).output;
+    const cacheRead = (usage as { cacheRead?: number }).cacheRead;
+    const cacheWrite = (usage as { cacheWrite?: number }).cacheWrite;
+    const totalTokens = (usage as { total?: number }).total;
+
+    if (typeof totalTokens === 'number') {
+      const tokensPerSec = (totalTokens / (durationMs / 1000)).toFixed(1);
+      const cacheInfo = cacheRead ? ` (cache: ${cacheRead})` : '';
+      parts.push(`📊 Tokens: ${totalTokens.toLocaleString()} (${tokensPerSec} t/s${cacheInfo})`);
+    } else if (typeof inputTokens === 'number' && typeof outputTokens === 'number') {
+      const total = inputTokens + outputTokens + (cacheRead || 0) + (cacheWrite || 0);
+      const tokensPerSec = (total / (durationMs / 1000)).toFixed(1);
+      const cacheInfo = (cacheRead || cacheWrite) ? ` (cache: R:${cacheRead || 0} W:${cacheWrite || 0})` : '';
+      parts.push(`📊 Tokens: ${total.toLocaleString()} (in: ${inputTokens.toLocaleString()}, out: ${outputTokens.toLocaleString()}, ${tokensPerSec} t/s${cacheInfo})`);
+    }
+  }
+
+  return parts.join(' | ');
+}
 
 function formatNestedLogPrefix(opts: AgentCommandOpts): string {
   const parts = [NESTED_LOG_PREFIX];
@@ -153,6 +210,11 @@ export async function deliverAgentCommandResult(params: {
 
   if (!payloads || payloads.length === 0) {
     runtime.log("No reply from agent.");
+    // Log timing stats even when there's no reply
+    const timingStats = formatTimingStats(result);
+    if (timingStats && shouldLogVerbose()) {
+      runtime.log(`\n${timingStats}`);
+    }
     return { payloads: [], meta: result.meta };
   }
 
@@ -171,10 +233,19 @@ export async function deliverAgentCommandResult(params: {
     }
     runtime.log(output);
   };
+
+  let payloadLogged = false;
   if (!deliver) {
     for (const payload of deliveryPayloads) {
       logPayload(payload);
+      payloadLogged = true;
     }
+  }
+
+  // Log timing stats after payloads (unless in JSON mode)
+  const timingStats = formatTimingStats(result);
+  if (timingStats && !opts.json && payloadLogged) {
+    runtime.log(`\n${timingStats}`);
   }
   if (deliver && deliveryChannel && !isInternalMessageChannel(deliveryChannel)) {
     if (deliveryTarget) {

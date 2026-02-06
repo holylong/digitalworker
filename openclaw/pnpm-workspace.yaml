@@ -8,8 +8,10 @@ onlyBuiltDependencies:
   - "@whiskeysockets/baileys"
   - "@lydell/node-pty"
   - "@matrix-org/matrix-sdk-crypto-nodejs"
-  - authenticate-pam
   - esbuild
   - protobufjs
   - sharp
   - "@napi-rs/canvas"
+
+# Note: authenticate-pam is Unix-only and excluded from Windows builds
+# If you're on Linux/macOS and need PAM authentication, add it back above

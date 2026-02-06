@@ -142,9 +142,24 @@ export async function runEmbeddedAttempt(
   const prevCwd = process.cwd();
   const runAbortController = new AbortController();
 
+  // Timing tracking
+  const timingStart = Date.now();
+  const timingMarkers: Record<string, number> = {
+    start: timingStart,
+  };
+
+  const logTiming = (stage: string) => {
+    const now = Date.now();
+    const elapsed = now - timingStart;
+    timingMarkers[stage] = now;
+    log.debug(`[TIMING] ${stage}: +${elapsed}ms`);
+  };
+
   log.debug(
     `embedded run start: runId=${params.runId} sessionId=${params.sessionId} provider=${params.provider} model=${params.modelId} thinking=${params.thinkLevel} messageChannel=${params.messageChannel ?? params.messageProvider ?? "unknown"}`,
   );
+
+  logTiming('init');
 
   await fs.mkdir(resolvedWorkspace, { recursive: true });
 
@@ -505,6 +520,8 @@ export async function runEmbeddedAttempt(
       // Force a stable streamFn reference so vitest can reliably mock @mariozechner/pi-ai.
       activeSession.agent.streamFn = streamSimple;
 
+      logTiming('session_ready');
+
       applyExtraParamsToAgent(
         activeSession.agent,
         params.config,
@@ -728,6 +745,7 @@ export async function runEmbeddedAttempt(
         }
 
         log.debug(`embedded run prompt start: runId=${params.runId} sessionId=${params.sessionId}`);
+        logTiming('prompt_start');
         cacheTrace?.recordStage("prompt:before", {
           prompt: effectivePrompt,
           messages: activeSession.messages,
@@ -803,6 +821,7 @@ export async function runEmbeddedAttempt(
         } catch (err) {
           promptError = err;
         } finally {
+          logTiming('prompt_complete');
           log.debug(
             `embedded run prompt end: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - promptStartedAt}`,
           );
@@ -864,6 +883,8 @@ export async function runEmbeddedAttempt(
         .slice()
         .toReversed()
         .find((m) => m.role === "assistant");
+
+      logTiming('complete');
 
       const toolMetasNormalized = toolMetas
         .filter(

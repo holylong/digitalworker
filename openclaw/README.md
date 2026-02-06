@@ -25,9 +25,9 @@ If you want a personal, single-user assistant that feels local, fast, and always
 
 [Website](https://openclaw.ai) · [Docs](https://docs.openclaw.ai) · [DeepWiki](https://deepwiki.com/openclaw/openclaw) · [Getting Started](https://docs.openclaw.ai/start/getting-started) · [Updating](https://docs.openclaw.ai/install/updating) · [Showcase](https://docs.openclaw.ai/start/showcase) · [FAQ](https://docs.openclaw.ai/start/faq) · [Wizard](https://docs.openclaw.ai/start/wizard) · [Nix](https://github.com/openclaw/nix-clawdbot) · [Docker](https://docs.openclaw.ai/install/docker) · [Discord](https://discord.gg/clawd)
 
-Preferred setup: run the onboarding wizard (`openclaw onboard`). It walks through gateway, workspace, channels, and skills. The CLI wizard is the recommended path and works on **macOS, Linux, and Windows (via WSL2; strongly recommended)**.
+Preferred setup: run the onboarding wizard (`openclaw onboard`). It walks through gateway, workspace, channels, and skills. The CLI wizard is the recommended path and works on **macOS, Linux, and Windows** (native Windows and WSL2 are both supported).
 Works with npm, pnpm, or bun.
-New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
+New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started) | [Windows Setup Guide](https://docs.openclaw.ai/install/windows)
 
 **Subscriptions (OAuth):**
 
@@ -45,6 +45,7 @@ Model note: while any model is supported, I strongly recommend **Anthropic Pro/M
 
 Runtime: **Node ≥22**.
 
+**macOS/Linux:**
 ```bash
 npm install -g openclaw@latest
 # or: pnpm add -g openclaw@latest
@@ -52,7 +53,16 @@ npm install -g openclaw@latest
 openclaw onboard --install-daemon
 ```
 
-The wizard installs the Gateway daemon (launchd/systemd user service) so it stays running.
+**Windows:**
+```cmd
+npm install -g openclaw@latest
+# or: pnpm add -g openclaw@latest
+
+openclaw onboard --install-daemon
+```
+> **Note:** For Windows, see [Windows Installation Guide](https://docs.openclaw.ai/install/windows) for prerequisites (Visual Studio Build Tools required).
+
+The wizard installs the Gateway daemon as a background service (launchd on macOS, systemd on Linux, Scheduled Task on Windows).
 
 ## Quick start (TL;DR)
 
