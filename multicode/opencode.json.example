@@ -1,0 +1,103 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "bailian-coding-plan/glm-5",
+  "provider": {
+    "bailian-coding-plan": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "Model Studio Coding Plan",
+      "options": {
+        "baseURL": "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1",
+        "apiKey": "sk-sp-08b9bb1ece66430cba44518cda7b7971"
+      },
+      "models": {
+        "qwen3.5-plus": {
+          "name": "Qwen3.5 Plus",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true,
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "options": {
+            "thinking": { "type": "enabled", "budgetTokens": 8192 }
+          }
+        },
+        "qwen3-max-2026-01-23": {
+          "name": "Qwen3 Max 2026-01-23",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true
+        },
+        "qwen3-coder-next": {
+          "name": "Qwen3 Coder Next",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true
+        },
+        "qwen3-coder-plus": {
+          "name": "Qwen3 Coder Plus",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true
+        },
+        "MiniMax-M2.5": {
+          "name": "MiniMax M2.5",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true,
+          "options": {
+            "thinking": { "type": "enabled", "budgetTokens": 8192 }
+          }
+        },
+        "glm-5": {
+          "name": "GLM-5",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true,
+          "options": {
+            "thinking": { "type": "enabled", "budgetTokens": 8192 }
+          }
+        },
+        "glm-4.7": {
+          "name": "GLM-4.7",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true,
+          "options": {
+            "thinking": { "type": "enabled", "budgetTokens": 8192 }
+          }
+        },
+        "kimi-k2.5": {
+          "name": "Kimi K2.5",
+          "limit": { "context": 128000, "output": 8192 },
+          "temperature": true,
+          "reasoning": true,
+          "attachment": true,
+          "tool_call": true,
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "options": {
+            "thinking": { "type": "enabled", "budgetTokens": 8192 }
+          }
+        }
+      }
+    }
+  }
+}
