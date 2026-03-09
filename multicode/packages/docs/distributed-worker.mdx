@@ -1,0 +1,155 @@
+# Distributed Worker System
+
+This document describes how to use OpenCode's distributed compilation and execution system for cross-platform development.
+
+## Architecture Overview
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                     Linux (Master)                              │
+│                                                                 │
+│  AI: Write code ──▶ Local save ──▶ Sync Engine ──▶ Push to    │
+│                                         │       Worker         │
+│                                         ▼                      │
+│                          Collect compile/test results          │
+└────────────────────────────────────────────────────────────────┘
+                                     │
+                                     │ HTTP/WS
+                                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│                    Windows/macOS (Worker)                       │
+│                                                                 │
+│  Worker Server (:4097)                                         │
+│  - Receive file changes                                         │
+│  - Execute compile commands                                     │
+│  - Return results                                               │
+└────────────────────────────────────────────────────────────────┘
+```
+
+## Quick Start
+
+### 1. Install on Windows Machine
+
+Copy the compiled Windows version to your Windows machine:
+
+```bash
+# Windows executable location
+packages/opencode/dist/opencode-windows-x64/bin/opencode.exe
+```
+
+### 2. Start Worker (on Windows)
+
+```powershell
+# Run in Windows PowerShell
+.\opencode.exe worker --port 4097 --hostname 0.0.0.0 --directory C:\workspace
+```
+
+### 3. Add Worker Node (on Linux)
+
+```bash
+opencode node add \
+  --name windows \
+  --url http://<windows-ip>:4097 \
+  --directory C:\workspace
+```
+
+### 4. Test and Use
+
+```bash
+# List nodes
+opencode node list
+
+# Test connection
+opencode node test --id wn_xxx
+
+# Sync project and compile
+opencode node sync --id wn_xxx --local-dir .
+opencode node exec --id wn_xxx --command "go build -o app.exe"
+```
+
+## CLI Commands
+
+### `opencode worker`
+
+Start a worker node that listens for commands from the master.
+
+```bash
+opencode worker [options]
+
+Options:
+  --port        Port to listen on (default: 4097)
+  --hostname    Hostname to listen on (default: 127.0.0.1, recommend 0.0.0.0)
+  --directory   Working directory
+```
+
+### `opencode node`
+
+Manage remote worker nodes.
+
+| Command | Description |
+|---------|-------------|
+| `node list` | List all configured nodes |
+| `node add` | Add a new worker node |
+| `node remove` | Remove a worker node |
+| `node test` | Test connection to a node |
+| `node sync` | Sync files to a worker |
+| `node exec` | Execute command on a worker |
+
+## AI Tool Usage
+
+The AI Agent can use the `worker` tool for cross-platform development:
+
+```json
+// List workers
+{ "action": "list" }
+
+// Sync files
+{
+  "action": "sync",
+  "workerId": "wn_xxx"
+}
+
+// Execute command
+{
+  "action": "exec",
+  "workerId": "wn_xxx",
+  "command": "go build -o app.exe"
+}
+
+// Compile and run
+{
+  "action": "compile-run",
+  "workerId": "wn_xxx",
+  "compileCommand": "go build -o chat.exe",
+  "runCommand": "./chat.exe --client linux-ip:8080"
+}
+```
+
+## Use Case: P2P Chat Application
+
+1. **Write code on Linux** - AI develops locally
+2. **Sync to Windows** - Use worker tool to sync code
+3. **Compile on Windows** - Execute `go build -o chat.exe`
+4. **Handle errors** - AI sees errors, fixes code, recompiles
+5. **Run tests** - Both machines run the app and communicate
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/worker/status` | GET | Get worker status and capabilities |
+| `/worker/sync` | POST | Sync files to worker |
+| `/worker/exec` | POST | Execute command on worker |
+
+## Files Created
+
+| File | Description |
+|------|-------------|
+| `src/worker/types.ts` | Type definitions |
+| `src/worker/worker.sql.ts` | Database schema |
+| `src/worker/registry.ts` | Node management |
+| `src/worker/sync.ts` | File sync and remote execution |
+| `src/worker/server.ts` | Worker HTTP server |
+| `src/cli/cmd/worker.ts` | `opencode worker` command |
+| `src/cli/cmd/node.ts` | `opencode node` command |
+| `src/tool/worker.ts` | AI tool for using workers |
