@@ -1,0 +1,144 @@
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "maxConcurrent": 4,
+      "model": {
+        "primary": "ollama/qwen3.5:27b"
+      },
+      "models": {
+        "zai/glm-4.7": {
+          "alias": "GLM"
+        }
+      },
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "workspace": "/home/skyer/.openclaw/workspace"
+    }
+  },
+  "auth": {
+    "profiles": {
+      "zai:default": {
+        "mode": "api_key",
+        "provider": "zai"
+      }
+    }
+  },
+  "channels": {
+    "nextcloud-talk": {
+      "baseUrl": "http://10.184.60.127:8080",
+      "botSecret": "19921012xll",
+      "enabled": true
+    },
+    "qqbot": {
+      "appId": "102837287",
+      "clientSecret": "FUk0HYq9Sm7SoAXuIh6WwNoGiBe8c7c8",
+      "enabled": true
+    },
+    "whatsapp": {
+      "allowFrom": [
+        "+18330023211"
+      ],
+      "debounceMs": 0,
+      "dmPolicy": "allowlist",
+      "groupPolicy": "allowlist",
+      "mediaMaxMb": 50,
+      "selfChatMode": true
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "268512b15c032e8f7b416d21d84e422fba953b841b1318cc"
+    },
+    "bind": "lan",
+    "controlUi": {
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "mode": "local",
+    "port": 18789,
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "boot-md": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "meta": {
+    "lastTouchedAt": "2026-02-04T08:57:53.414Z",
+    "lastTouchedVersion": "2026.1.30"
+  },
+  "models": {
+    "providers": {
+      "ollama": {
+        "api": "ollama",
+        "apiKey": "ollama-local",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "models": [
+          {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5:27b",
+            "input": [
+              "text",
+              "image"
+            ],
+            "name": "qwen3.5:27b",
+            "reasoning": true
+          }
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "entries": {
+      "nextcloud-talk": {
+        "enabled": true
+      },
+      "qqbot": {
+        "enabled": true
+      },
+      "whatsapp": {
+        "enabled": true
+      }
+    },
+    "load": {
+      "paths": []
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "npm"
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-02-04T08:57:53.410Z",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local",
+    "lastRunVersion": "2026.1.30"
+  }
+}

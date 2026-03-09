@@ -1,0 +1,1 @@
+openclaw onboard --install-daemon
