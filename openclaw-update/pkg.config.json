@@ -1,0 +1,21 @@
+{
+  "pkg": {
+    "assets": [
+      "dist/**/*",
+      "assets/**/*",
+      "extensions/**/*",
+      "skills/**/*",
+      "docs/**/*",
+      "CHANGELOG.md",
+      "README.md",
+      "LICENSE"
+    ],
+    "outputPath": "bin",
+    "scripts": [
+      "dist/**/*.js",
+      "dist/**/*.mjs",
+      "openclaw.mjs"
+    ],
+    "targets": ["node24-win-x64"]
+  }
+}
